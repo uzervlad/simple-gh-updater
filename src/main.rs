@@ -51,10 +51,10 @@ async fn main() {
 
   println!("Deleting previous files");
 
-  {
-    let exe_path = std::env::current_exe().unwrap();
-    let exe = exe_path.file_name().unwrap();
+  let exe_path = std::env::current_exe().unwrap();
+  let exe = exe_path.file_name().unwrap();
 
+  {
     for entry in fs::read_dir(".").unwrap() {
       let entry = entry.unwrap();
       let path = entry.path();
@@ -69,31 +69,33 @@ async fn main() {
     }
   }
 
-  let archive = File::open(ZIP_NAME).unwrap();
-  let mut archive = zip::ZipArchive::new(archive).unwrap();
+  {
+    let archive = File::open(ZIP_NAME).unwrap();
+    let mut archive = zip::ZipArchive::new(archive).unwrap();
 
-  for i in 0..archive.len() {
-    let mut file = archive.by_index(i).unwrap();
-    let path = match file.enclosed_name() {
-      Some(path) => path.to_owned(),
-      None => continue,
-    };
+    for i in 0..archive.len() {
+      let mut file = archive.by_index(i).unwrap();
+      let path = match file.enclosed_name() {
+        Some(path) => path.to_owned(),
+        None => continue,
+      };
 
-    if path.file_name().unwrap().to_str().unwrap().eq(ZIP_NAME) {
-      continue;
-    }
-
-    if (*file.name()).ends_with('/') {
-      fs::create_dir_all(&path).unwrap();
-    } else {
-      if let Some(p) = path.parent() {
-        if !p.exists() {
-          fs::create_dir_all(p).unwrap();
-        }
+      if path.file_name().unwrap().eq(exe_path.file_name().unwrap()) {
+        continue;
       }
-      let mut outfile = fs::File::create(&path).unwrap();
-      io::copy(&mut file, &mut outfile).unwrap();
-      println!("Extracted {}", path.display());
+
+      if (*file.name()).ends_with('/') {
+        fs::create_dir_all(&path).unwrap();
+      } else {
+        if let Some(p) = path.parent() {
+          if !p.exists() {
+            fs::create_dir_all(p).unwrap();
+          }
+        }
+        let mut outfile = fs::File::create(&path).unwrap();
+        io::copy(&mut file, &mut outfile).unwrap();
+        println!("Extracted {}", path.display());
+      }
     }
   }
 
