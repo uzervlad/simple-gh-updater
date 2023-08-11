@@ -1,6 +1,12 @@
-use std::{fs::{File, self}, io::{Write, self}};
+use std::{fs::{File, self}, io::{Write, self, Read}};
 
 use indicatif::{ProgressBar, ProgressStyle, ProgressState};
+
+macro_rules! pause {
+  () => {
+    io::stdin().read(&mut [0u8]).unwrap();
+  };
+}
 
 const REPO: &'static str = "uzervlad/kool-gosu";
 const ZIP_NAME: &'static str = "kool.zip";
@@ -12,6 +18,12 @@ async fn main() {
     let mut source = reqwest::get(url).await.expect("Unable to fetch zip");
     let content_length = str::parse::<u64>(source.headers().get("content-length").unwrap().to_str().unwrap()).unwrap();
     
+    if source.headers().get("content-type").unwrap().to_str().unwrap() != "application/octet-stream" {
+      println!("Wrong file type - please report to the developer");
+      pause!();
+      return;
+    }
+
     println!("Downloading zip");
     let bar = ProgressBar::new(content_length);
     bar.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.green}] {bytes}/{total_bytes} ({eta})")
@@ -90,4 +102,6 @@ async fn main() {
   fs::remove_file(ZIP_NAME).unwrap();
 
   println!("Update successful");
+
+  pause!();
 }
